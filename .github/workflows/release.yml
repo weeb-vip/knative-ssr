@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# A release writes a git tag, a chore(release) commit here, and a commit in
+# weeb-argocd. Two runs doing that at once would race on all three, so queue
+# them rather than cancelling — a cancelled run can leave an image pushed with
+# no tag pointing at it.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    # The same checks PRs run. ci.yml no longer triggers on push to main itself,
+    # so this is where they run for a merge — and the release is gated on them.
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Release
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.semantic.outputs.new_release_published }}
+      version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # semantic-release reads the whole tag history to work out the next
+          # version; a shallow clone makes it think every release is the first.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Login to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Semantic Release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          DOCKER_IMAGE: ${{ secrets.REGISTRY }}/weeb-vip/edge-cache
+        with:
+          extra_plugins: |
+            @semantic-release/exec@6.0.3
+            @semantic-release/git@10.0.1
+
+      - name: Summary
+        run: |
+          if [[ "${{ steps.semantic.outputs.new_release_published }}" == "true" ]]; then
+            echo "released ${{ steps.semantic.outputs.new_release_version }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- edge image pushed to Harbor" >> "$GITHUB_STEP_SUMMARY"
+            echo "- chart version and edge.image.tag stamped" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "no release (chore/ci/docs commit)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  argocd:
+    name: Bump edge-cache in weeb-argocd
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: weeb-vip/weeb-argocd
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Rewrite tags marked `# knative-ssr`
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          # Marker-driven, like every other weeb-vip release. Checking the
+          # marker exists at all is the important part: a sed that matches
+          # nothing exits 0, so without this the release looks green while the
+          # cluster keeps running the previous image. That is exactly how the
+          # weeb-frontend Knative tag drifted.
+          if ! grep -rqE 'tag:.*# knative-ssr' --include='*.yaml' .; then
+            echo '::error::No "tag: ... # knative-ssr" marker found in weeb-argocd.'
+            echo 'Nothing would be deployed. Add the marker to the edge image tag line.'
+            exit 1
+          fi
+
+          find . -type f -name '*.yaml' -print0 \
+            | xargs -0 sed -E -i 's/(tag:[[:space:]]).*( # knative-ssr)/\1'"$VERSION"'\2/'
+
+          if git diff --quiet; then
+            echo "weeb-argocd already pins $VERSION — nothing to commit"
+            exit 0
+          fi
+
+          git config user.email noreply@weeb.vip
+          git config user.name weeb-vip
+          git commit -am "feat: knative-ssr $VERSION"
+          git push origin main
