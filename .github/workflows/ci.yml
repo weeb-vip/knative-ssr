@@ -1,9 +1,10 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  # Merges to main run these through release.yml, which gates the release on
+  # them. A push trigger here would duplicate the whole suite on every merge.
+  workflow_call:
 
 jobs:
   edge:
@@ -87,6 +88,66 @@ jobs:
         run: |
           if helm template app charts/ssr-knative -n web > /dev/null 2>&1; then
             echo "::error::chart rendered with no image or host set"
+            exit 1
+          fi
+
+  release-script:
+    name: Version stamping
+    runs-on: ubuntu-latest
+    # scripts/set-version.sh only runs during a release, so without this job its
+    # first execution would be the one that matters. It edits the chart with
+    # sed, which means restructuring values.yaml can silently stop it matching —
+    # and the symptom is a release whose chart still names the previous image.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Stamps the chart
+        run: |
+          ./scripts/set-version.sh 9.9.9
+
+          grep -qx 'version: 9.9.9'      charts/ssr-knative/Chart.yaml
+          grep -qx 'appVersion: "9.9.9"' charts/ssr-knative/Chart.yaml
+          grep -qF '    tag: "9.9.9"'    charts/ssr-knative/values.yaml
+
+      - name: Leaves the consumer's own image alone
+        # ssr.image.tag sits at the same indentation as the edge tag and is the
+        # single easiest thing for a broadened sed to clobber. It must stay
+        # empty so the chart keeps rejecting a deployment that forgot to set it.
+        run: |
+          if ! grep -qF 'tag: ""' charts/ssr-knative/values.yaml; then
+            echo '::error::set-version.sh overwrote ssr.image.tag'
+            exit 1
+          fi
+          if helm template app charts/ssr-knative -n web > /dev/null 2>&1; then
+            echo '::error::chart no longer requires ssr.image.tag after stamping'
+            exit 1
+          fi
+
+      - name: Stamped chart still renders
+        run: |
+          helm lint charts/ssr-knative \
+            --set ssr.image.repository=example/app \
+            --set ssr.image.tag=1.0.0 \
+            --set istio.host=app.example.com
+
+          helm template app charts/ssr-knative -n web \
+            --set ssr.image.repository=example/app \
+            --set ssr.image.tag=ci \
+            --set istio.host=app.example.com \
+          | grep -qF ':9.9.9' || {
+              echo '::error::stamped edge tag did not reach the rendered manifests'
+              exit 1
+            }
+          # ssr.image.tag is pinned to `ci` in that render, so the only way
+          # :9.9.9 appears is the edge image the script just stamped. Asserting
+          # on the tag rather than a full image string keeps this from breaking
+          # if the default edge repository is ever changed.
+
+      - name: Refuses to stamp without a version
+        run: |
+          if ./scripts/set-version.sh 2>/dev/null; then
+            echo '::error::set-version.sh accepted an empty version'
             exit 1
           fi
 
