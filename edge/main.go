@@ -169,10 +169,10 @@ func (s *server) director(r *http.Request) {
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	started := time.Now()
-	outcome := "bypass"
-	defer func() { s.m.observe(outcome, started) }()
-
+	// Our own endpoints are answered before any measurement starts. Counting
+	// them would drown real traffic: kubelet probes every 5s per replica plus a
+	// Prometheus scrape every 30s add up to more requests than a quiet site
+	// serves, all of them fast, which flatters latency and inflates the rate.
 	switch r.URL.Path {
 	case "/_edge/healthz":
 		w.Header().Set("content-type", "application/json")
@@ -183,6 +183,10 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.writeMetrics(w)
 		return
 	}
+
+	started := time.Now()
+	outcome := "bypass"
+	defer func() { s.m.observe(outcome, started) }()
 
 	// Cache admin lives on the SSR pods (they own the writes, so they own the
 	// purges). Waking a pod to serve a purge is fine — purges are rare.
