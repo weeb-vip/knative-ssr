@@ -112,7 +112,7 @@ edge:
 
   image:
     repository: ghcr.io/weeb-vip/knative-ssr-edge
-    tag: "0.1.0"
+    tag: "0.3.0"
     pullPolicy: IfNotPresent
 
   imagePullSecrets: []

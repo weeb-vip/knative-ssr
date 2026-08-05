@@ -2,8 +2,8 @@ apiVersion: v2
 name: ssr-knative
 description: SSR on Knative Serving with a Redis page cache and an always-on edge tier
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.3.0
+appVersion: "0.3.0"
 keywords:
   - sveltekit
   - knative
