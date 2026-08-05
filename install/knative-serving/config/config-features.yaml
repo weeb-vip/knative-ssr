@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-features
+  namespace: knative-serving
+  labels:
+    serving.knative.dev/release: devel
+data:
+  # Knative validates the pod spec of every Service against an allow-list and
+  # rejects fields that are not explicitly enabled, with an admission error like
+  # "must not set the field(s): spec.template.spec.nodeSelector".
+  #
+  # ConfigMap volumes and subPath mounts — which is how the chart mounts
+  # config.json — are permitted by default and need no flag here.
+
+  # Used by the chart's ssr.nodeSelector / ssr.tolerations values.
+  kubernetes.podspec-nodeselector: "enabled"
+  kubernetes.podspec-tolerations: "enabled"
+
+  # Lets the SSR tier be spread across nodes if it is ever pinned above
+  # minScale 0.
+  kubernetes.podspec-topologyspreadconstraints: "enabled"
+
+  # Needed if you want to pass pod metadata into the container as env vars
+  # (valueFrom.fieldRef), which the OTEL setup commonly wants for pod name.
+  kubernetes.podspec-fieldref: "enabled"
+
+  # Scratch space for a container that needs it. Not used by the chart today,
+  # but enabling it costs nothing and avoids a confusing admission failure the
+  # first time someone adds one.
+  kubernetes.podspec-volumes-emptydir: "enabled"
+
+  kubernetes.podspec-persistent-volume-claim: "disabled"

@@ -1,0 +1,92 @@
+{{- if .Values.istio.enabled }}
+{{- $gatewayName := default (printf "%s-gateway" (include "weeb-ssr.fullname" .)) .Values.istio.gateway.name }}
+{{- if .Values.istio.gateway.create }}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ $gatewayName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "weeb-ssr.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- toYaml .Values.istio.gateway.selector | nindent 4 }}
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - {{ .Values.istio.host | quote }}
+      {{- if .Values.istio.gateway.httpsRedirect }}
+      tls:
+        httpsRedirect: true
+      {{- end }}
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: {{ .Values.istio.gateway.credentialName }}
+      hosts:
+        - {{ .Values.istio.host | quote }}
+---
+{{- end }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "weeb-ssr.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "weeb-ssr.labels" . | nindent 4 }}
+spec:
+  hosts:
+    - {{ .Values.istio.host | quote }}
+  gateways:
+    - {{ $gatewayName }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            {{- if .Values.edge.enabled }}
+            # Everything enters through the edge tier. Routing straight at the
+            # Knative service would work but bypass the cache, so misses and
+            # hits alike would wake a pod.
+            host: {{ include "weeb-ssr.edgeName" . }}
+            port:
+              number: 80
+            {{- else }}
+            host: {{ include "weeb-ssr.ssrName" . }}
+            port:
+              number: 80
+            {{- end }}
+      {{- if not .Values.edge.enabled }}
+      # Knative routes by Host header, and the ksvc is cluster-local, so the
+      # authority has to become its internal name. Without this the request
+      # arrives at the local gateway still claiming to be for the public host
+      # and matches no Knative route — a 404 that looks like the app is down.
+      # With the edge proxy in the path this is its job instead (see director()).
+      rewrite:
+        authority: {{ printf "%s.%s.svc.cluster.local" (include "weeb-ssr.ssrName" .) .Release.Namespace | quote }}
+      {{- end }}
+      headers:
+        request:
+          set:
+            # The cache key is host-scoped and both tiers read this header, so
+            # it has to be set here — not merely forwarded.
+            x-forwarded-host: {{ .Values.istio.host | quote }}
+            x-forwarded-proto: "https"
+      # A cold Knative pod can take a couple of seconds to answer; the default
+      # 15s is usually fine but a miss behind a cold start plus a slow GraphQL
+      # call can exceed it.
+      timeout: 60s
+      retries:
+        attempts: 2
+        perTryTimeout: 30s
+        # Never retry a request the upstream already began answering, and never
+        # retry a 5xx the app produced deliberately.
+        retryOn: connect-failure,refused-stream,unavailable
+{{- end }}

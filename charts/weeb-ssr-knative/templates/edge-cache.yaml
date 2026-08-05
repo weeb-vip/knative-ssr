@@ -1,0 +1,132 @@
+{{- if .Values.edge.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "weeb-ssr.edgeName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: edge
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: edge
+  ports:
+    - name: http-edge
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "weeb-ssr.edgeName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: edge
+spec:
+  replicas: {{ .Values.edge.replicas }}
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: edge
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.istio.sidecarInject }}
+        sidecar.istio.io/inject: "true"
+        {{- end }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/_edge/metrics"
+        # Roll the edge pods whenever cache-affecting config changes, so the two
+        # tiers never disagree about how a key is built.
+        checksum/cache-config: {{ include "weeb-ssr.sharedCacheEnv" . | sha256sum }}
+        {{- with .Values.edge.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "weeb-ssr.labels" . | nindent 8 }}
+        app.kubernetes.io/component: edge
+    spec:
+      {{- with .Values.edge.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # Spread across nodes: this tier is the one that must not go away, since
+      # everything reaches SSR through it.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: edge
+      containers:
+        - name: edge-cache
+          image: "{{ .Values.edge.image.repository }}:{{ .Values.edge.image.tag }}"
+          imagePullPolicy: {{ .Values.edge.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: LISTEN
+              value: ":8080"
+            - name: UPSTREAM
+              value: {{ include "weeb-ssr.ssrUpstream" . | quote }}
+            - name: UPSTREAM_TIMEOUT
+              value: {{ .Values.edge.upstreamTimeout | quote }}
+            - name: HOST_HEADER
+              value: "x-forwarded-host"
+            {{- include "weeb-ssr.sharedCacheEnv" . | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /_edge/healthz
+              port: 8080
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /_edge/healthz
+              port: 8080
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 4
+          resources:
+            {{- toYaml .Values.edge.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+{{- if .Values.edge.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "weeb-ssr.edgeName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: edge
+spec:
+  minAvailable: {{ .Values.edge.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: edge
+{{- end }}
+{{- end }}

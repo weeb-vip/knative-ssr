@@ -1,0 +1,45 @@
+{{ include "weeb-ssr.fullname" . }} deployed to namespace {{ .Release.Namespace }}.
+
+  Cache namespace : {{ .Values.cache.keyPrefix }}:{{ include "weeb-ssr.cacheVersion" . }}
+  SSR             : {{ include "weeb-ssr.ssrName" . }} (minScale {{ .Values.ssr.autoscaling.minScale }}, maxScale {{ .Values.ssr.autoscaling.maxScale }})
+{{- if .Values.edge.enabled }}
+  Edge            : {{ include "weeb-ssr.edgeName" . }} ({{ .Values.edge.replicas }} replicas)
+{{- end }}
+  Redis           : {{ include "weeb-ssr.redisUrl" . }}
+{{- if .Values.istio.enabled }}
+  URL             : https://{{ .Values.istio.host }}
+{{- end }}
+
+Check it is working:
+
+  # Should report X-Cache on every response
+  curl -sI https://{{ .Values.istio.host }}/ | grep -i x-cache
+
+  # Watch the SSR service scale
+  kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/component=ssr -w
+
+{{- if eq (int .Values.cache.defaultTtl) 0 }}
+
+NOTE: cache.defaultTtl is 0, so nothing is cached until a route opts in:
+
+  // src/routes/show/[id]/+page.server.ts
+  export const load = async ({ params, platform }) => {
+    platform?.cache?.public().ttl(60).swr(600).tag(`show:${params.id}`);
+    ...
+  };
+
+Until then every request renders, and X-Cache will read MISS.
+{{- end }}
+
+{{- if not (or .Values.cache.purgeToken .Values.cache.existingSecret) }}
+
+NOTE: no cache.purgeToken set, so /_cache/purge and /_cache/stats are disabled.
+Tag-based invalidation will not work until you set one.
+{{- end }}
+
+{{- if and .Values.edge.enabled (gt (int .Values.ssr.autoscaling.minScale) 0) }}
+
+NOTE: the edge tier is enabled but ssr.autoscaling.minScale is {{ .Values.ssr.autoscaling.minScale }}.
+That keeps an SSR pod warm permanently, which is the cost the edge tier exists
+to avoid. Set it to 0 once you trust the hit rate.
+{{- end }}

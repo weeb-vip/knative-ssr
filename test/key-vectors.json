@@ -1,0 +1,1206 @@
+{
+  "keys": [
+    {
+      "name": "root [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/:0"
+    },
+    {
+      "name": "root [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/:0"
+    },
+    {
+      "name": "root [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/:0"
+    },
+    {
+      "name": "simple path [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/airing",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/airing:0"
+    },
+    {
+      "name": "simple path [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/airing",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/airing:0"
+    },
+    {
+      "name": "simple path [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/airing",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/airing:0"
+    },
+    {
+      "name": "show detail [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/show/12345",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/show/12345:0"
+    },
+    {
+      "name": "show detail [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/show/12345",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/show/12345:0"
+    },
+    {
+      "name": "show detail [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/show/12345",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/show/12345:0"
+    },
+    {
+      "name": "sorted params [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "z=1&a=2&m=3",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "a=2&m=3&z=1",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?a=2&m=3&z=1:0"
+    },
+    {
+      "name": "sorted params [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "z=1&a=2&m=3",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "a=2&m=3&z=1",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?a=2&m=3&z=1:0"
+    },
+    {
+      "name": "sorted params [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "z=1&a=2&m=3",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "a=2&m=3&z=1",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?a=2&m=3&z=1:0"
+    },
+    {
+      "name": "duplicate keys sorted by value [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "tag=b&tag=a&tag=c",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "tag=a&tag=b&tag=c",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?tag=a&tag=b&tag=c:0"
+    },
+    {
+      "name": "duplicate keys sorted by value [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "tag=b&tag=a&tag=c",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "tag=a&tag=b&tag=c",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?tag=a&tag=b&tag=c:0"
+    },
+    {
+      "name": "duplicate keys sorted by value [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "tag=b&tag=a&tag=c",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "tag=a&tag=b&tag=c",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?tag=a&tag=b&tag=c:0"
+    },
+    {
+      "name": "tracking params stripped [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/",
+        "rawQuery": "utm_source=twitter&q=naruto&gclid=xyz",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=naruto",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/?q=naruto:0"
+    },
+    {
+      "name": "tracking params stripped [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/",
+        "rawQuery": "utm_source=twitter&q=naruto&gclid=xyz",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=naruto",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/?q=naruto:0"
+    },
+    {
+      "name": "tracking params stripped [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/",
+        "rawQuery": "utm_source=twitter&q=naruto&gclid=xyz",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=naruto",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/?q=naruto:0"
+    },
+    {
+      "name": "only tracking params [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/",
+        "rawQuery": "utm_source=x&fbclid=y",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/:0"
+    },
+    {
+      "name": "only tracking params [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/",
+        "rawQuery": "utm_source=x&fbclid=y",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/:0"
+    },
+    {
+      "name": "only tracking params [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/",
+        "rawQuery": "utm_source=x&fbclid=y",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/:0"
+    },
+    {
+      "name": "space encoding [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=cowboy bebop",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=cowboy%20bebop",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?q=cowboy%20bebop:0"
+    },
+    {
+      "name": "space encoding [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=cowboy bebop",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=cowboy%20bebop",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?q=cowboy%20bebop:0"
+    },
+    {
+      "name": "space encoding [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=cowboy bebop",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=cowboy%20bebop",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?q=cowboy%20bebop:0"
+    },
+    {
+      "name": "plus is a space [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=cowboy+bebop",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=cowboy%20bebop",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?q=cowboy%20bebop:0"
+    },
+    {
+      "name": "plus is a space [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=cowboy+bebop",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=cowboy%20bebop",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?q=cowboy%20bebop:0"
+    },
+    {
+      "name": "plus is a space [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=cowboy+bebop",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=cowboy%20bebop",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?q=cowboy%20bebop:0"
+    },
+    {
+      "name": "punctuation unreserved by encodeURIComponent [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=a!b~c*d'e(f)g",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=a!b~c*d'e(f)g",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?q=a!b~c*d'e(f)g:0"
+    },
+    {
+      "name": "punctuation unreserved by encodeURIComponent [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=a!b~c*d'e(f)g",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=a!b~c*d'e(f)g",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?q=a!b~c*d'e(f)g:0"
+    },
+    {
+      "name": "punctuation unreserved by encodeURIComponent [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=a!b~c*d'e(f)g",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=a!b~c*d'e(f)g",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?q=a!b~c*d'e(f)g:0"
+    },
+    {
+      "name": "reserved punctuation [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=a/b:c@d,e;f=g",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=a%2Fb%3Ac%40d%2Ce%3Bf%3Dg",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?q=a%2Fb%3Ac%40d%2Ce%3Bf%3Dg:0"
+    },
+    {
+      "name": "reserved punctuation [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=a/b:c@d,e;f=g",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=a%2Fb%3Ac%40d%2Ce%3Bf%3Dg",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?q=a%2Fb%3Ac%40d%2Ce%3Bf%3Dg:0"
+    },
+    {
+      "name": "reserved punctuation [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=a/b:c@d,e;f=g",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=a%2Fb%3Ac%40d%2Ce%3Bf%3Dg",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?q=a%2Fb%3Ac%40d%2Ce%3Bf%3Dg:0"
+    },
+    {
+      "name": "unicode japanese [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=カウボーイビバップ",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=%E3%82%AB%E3%82%A6%E3%83%9C%E3%83%BC%E3%82%A4%E3%83%93%E3%83%90%E3%83%83%E3%83%97",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?q=%E3%82%AB%E3%82%A6%E3%83%9C%E3%83%BC%E3%82%A4%E3%83%93%E3%83%90%E3%83%83%E3%83%97:0"
+    },
+    {
+      "name": "unicode japanese [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=カウボーイビバップ",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=%E3%82%AB%E3%82%A6%E3%83%9C%E3%83%BC%E3%82%A4%E3%83%93%E3%83%90%E3%83%83%E3%83%97",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?q=%E3%82%AB%E3%82%A6%E3%83%9C%E3%83%BC%E3%82%A4%E3%83%93%E3%83%90%E3%83%83%E3%83%97:0"
+    },
+    {
+      "name": "unicode japanese [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=カウボーイビバップ",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=%E3%82%AB%E3%82%A6%E3%83%9C%E3%83%BC%E3%82%A4%E3%83%93%E3%83%90%E3%83%83%E3%83%97",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?q=%E3%82%AB%E3%82%A6%E3%83%9C%E3%83%BC%E3%82%A4%E3%83%93%E3%83%90%E3%83%83%E3%83%97:0"
+    },
+    {
+      "name": "emoji [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=🍿",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=%F0%9F%8D%BF",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?q=%F0%9F%8D%BF:0"
+    },
+    {
+      "name": "emoji [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=🍿",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=%F0%9F%8D%BF",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?q=%F0%9F%8D%BF:0"
+    },
+    {
+      "name": "emoji [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=🍿",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=%F0%9F%8D%BF",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?q=%F0%9F%8D%BF:0"
+    },
+    {
+      "name": "empty value [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?q=:0"
+    },
+    {
+      "name": "empty value [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?q=:0"
+    },
+    {
+      "name": "empty value [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?q=:0"
+    },
+    {
+      "name": "ampersand in value [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=fate%26stay",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=fate%26stay",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/search?q=fate%26stay:0"
+    },
+    {
+      "name": "ampersand in value [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=fate%26stay",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=fate%26stay",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/search?q=fate%26stay:0"
+    },
+    {
+      "name": "ampersand in value [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/search",
+        "rawQuery": "q=fate%26stay",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "q=fate%26stay",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/search?q=fate%26stay:0"
+    },
+    {
+      "name": "path with encoded chars [pub]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "pub",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/show/some%20title",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:pub:staging.weeb.vip:GET:/show/some%20title:0"
+    },
+    {
+      "name": "path with encoded chars [anon]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "anon",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/show/some%20title",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:anon:staging.weeb.vip:GET:/show/some%20title:0"
+    },
+    {
+      "name": "path with encoded chars [auth]",
+      "input": {
+        "prefix": "ssr",
+        "version": "1.98.0",
+        "segment": "auth",
+        "host": "staging.weeb.vip",
+        "method": "GET",
+        "pathname": "/show/some%20title",
+        "rawQuery": "",
+        "ignored": [
+          "utm_source",
+          "utm_medium",
+          "gclid",
+          "fbclid",
+          "ref"
+        ]
+      },
+      "normalisedQuery": "",
+      "key": "ssr:1.98.0:auth:staging.weeb.vip:GET:/show/some%20title:0"
+    }
+  ],
+  "vary": [
+    {
+      "name": "vary 0",
+      "headers": {},
+      "varyHeaders": [],
+      "hash": "0"
+    },
+    {
+      "name": "vary 1",
+      "headers": {
+        "accept-language": "en-GB"
+      },
+      "varyHeaders": [
+        "accept-language"
+      ],
+      "hash": "b5325e87aba14bf9"
+    },
+    {
+      "name": "vary 2",
+      "headers": {
+        "accept-language": "ja"
+      },
+      "varyHeaders": [
+        "accept-language"
+      ],
+      "hash": "3ff501bfc8b0c3d6"
+    },
+    {
+      "name": "vary 3",
+      "headers": {},
+      "varyHeaders": [
+        "accept-language"
+      ],
+      "hash": "5cfad1acee981c17"
+    },
+    {
+      "name": "vary 4",
+      "headers": {
+        "accept-language": "en",
+        "x-device": "mobile"
+      },
+      "varyHeaders": [
+        "X-Device",
+        "accept-language"
+      ],
+      "hash": "bc35e4f54aa3cfd9"
+    }
+  ],
+  "auth": [
+    {
+      "cookie": "",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": false,
+      "expected": false
+    },
+    {
+      "cookie": "theme=dark",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": false,
+      "expected": false
+    },
+    {
+      "cookie": "auth_token=abc123",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": true,
+      "expected": true
+    },
+    {
+      "cookie": "theme=dark; auth_token=abc123",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": true,
+      "expected": true
+    },
+    {
+      "cookie": "auth_token=",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": false,
+      "expected": false
+    },
+    {
+      "cookie": "auth_token=null",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": false,
+      "expected": false
+    },
+    {
+      "cookie": "auth_token=undefined",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": false,
+      "expected": false
+    },
+    {
+      "cookie": "auth_token=deleted",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": false,
+      "expected": false
+    },
+    {
+      "cookie": "guest_access_token=x",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": false,
+      "expected": false
+    },
+    {
+      "cookie": "session=xyz",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": true,
+      "expected": true
+    },
+    {
+      "cookie": "  refresh_token = spaced  ",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": true,
+      "expected": true
+    },
+    {
+      "cookie": "malformed;;;auth_token=ok",
+      "authCookies": [
+        "auth_token",
+        "access_token",
+        "refresh_token",
+        "authToken",
+        "session"
+      ],
+      "authenticated": true,
+      "expected": true
+    }
+  ]
+}

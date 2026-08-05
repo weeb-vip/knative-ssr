@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-deployment
+  namespace: knative-serving
+  labels:
+    serving.knative.dev/release: devel
+data:
+  # By default Knative resolves image tags to digests when it creates a revision,
+  # so the revision is pinned to exact bytes. Doing that requires the Knative
+  # controller itself to authenticate to the registry, which it cannot do for
+  # harbor without credentials wired into knative-serving.
+  #
+  # Listing the registry here skips that resolution: the pod pulls by tag using
+  # the namespace's `harbor` imagePullSecret, exactly as the current Deployment
+  # does. The tradeoff is that a revision no longer pins a digest, so re-pushing
+  # the same tag changes what a revision runs — which is why the chart derives
+  # the cache version from the tag and you should treat tags as immutable.
+  registries-skipping-tag-resolving: "harbor.floret.dev"
+
+  # Time a revision has to become ready before it is marked failed. A cold Node
+  # image pull plus SvelteKit boot can exceed the 120s default on a slow node.
+  progress-deadline: "300s"
+
+  # Knative's queue-proxy sits in front of every SSR container. It is small, but
+  # the defaults are sized for hello-world containers.
+  queue-sidecar-cpu-request: "25m"
+  queue-sidecar-memory-request: "50Mi"
+  queue-sidecar-cpu-limit: "1000m"
+  queue-sidecar-memory-limit: "200Mi"

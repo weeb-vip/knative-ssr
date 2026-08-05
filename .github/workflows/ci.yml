@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  adapter:
+    name: Adapter (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --no-audit --no-fund --legacy-peer-deps
+      - run: npm test
+
+  edge:
+    name: Edge proxy (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: edge/go.sum
+      - run: go vet ./...
+        working-directory: edge
+      - run: go test ./...
+        working-directory: edge
+
+  contract:
+    name: Key format contract
+    runs-on: ubuntu-latest
+    # The Go and JS key builders must agree byte-for-byte. A mismatch does not
+    # error at runtime — it silently drops the hit rate to zero — so this job
+    # regenerates the vectors from the JS side and re-asserts them in Go. If it
+    # fails, someone changed one implementation without the other.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: edge/go.sum
+      - run: node scripts/gen-key-vectors.mjs
+      - name: Vectors must be committed up to date
+        run: git diff --exit-code test/key-vectors.json
+      - run: go test ./...
+        working-directory: edge
+
+  chart:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: helm lint charts/weeb-ssr-knative
+      - name: Render with defaults
+        run: |
+          helm template weeb-frontend charts/weeb-ssr-knative \
+            -n weeb-staging \
+            --set fullnameOverride=weeb-frontend \
+            --set cache.purgeToken=ci > /dev/null
+      - name: Render without the edge tier
+        run: |
+          helm template weeb-frontend charts/weeb-ssr-knative \
+            -n weeb-staging \
+            --set fullnameOverride=weeb-frontend \
+            --set edge.enabled=false \
+            --set ssr.autoscaling.minScale=1 > /dev/null
+      - name: Render with an external Redis
+        run: |
+          helm template weeb-frontend charts/weeb-ssr-knative \
+            -n weeb-staging \
+            --set fullnameOverride=weeb-frontend \
+            --set redis.enabled=false \
+            --set redis.external=redis://elsewhere:6379 > /dev/null
+
+  image:
+    name: Build edge image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: edge
+          push: false
+          tags: edge-cache:ci

@@ -1,0 +1,114 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: {{ include "weeb-ssr.ssrName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ssr
+    # Cluster-local always: the Istio Gateway and VirtualService in this chart
+    # are the only public entry point, so Knative must never publish a route of
+    # its own. A second way in would bypass the edge cache — and would need its
+    # own certificate and hostname to be useful anyway.
+    networking.knative.dev/visibility: cluster-local
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: {{ .Values.ssr.autoscaling.minScale | quote }}
+        autoscaling.knative.dev/max-scale: {{ .Values.ssr.autoscaling.maxScale | quote }}
+        autoscaling.knative.dev/metric: {{ .Values.ssr.autoscaling.metric | quote }}
+        autoscaling.knative.dev/target: {{ .Values.ssr.autoscaling.target | quote }}
+        autoscaling.knative.dev/window: {{ .Values.ssr.autoscaling.window | quote }}
+        autoscaling.knative.dev/scale-to-zero-grace-period: {{ .Values.ssr.autoscaling.scaleToZeroGracePeriod | quote }}
+        autoscaling.knative.dev/scale-to-zero-pod-retention-period: {{ .Values.ssr.autoscaling.scaleToZeroPodRetentionPeriod | quote }}
+        {{- if .Values.istio.sidecarInject }}
+        sidecar.istio.io/inject: "true"
+        {{- end }}
+        {{- with .Values.ssr.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "weeb-ssr.labels" . | nindent 8 }}
+        app.kubernetes.io/component: ssr
+    spec:
+      containerConcurrency: {{ .Values.ssr.containerConcurrency }}
+      timeoutSeconds: {{ .Values.ssr.timeoutSeconds }}
+      {{- with .Values.ssr.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ssr.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ssr.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: ssr
+          image: "{{ .Values.ssr.image.repository }}:{{ .Values.ssr.image.tag }}"
+          imagePullPolicy: {{ .Values.ssr.image.pullPolicy }}
+          ports:
+            # Knative requires the name to be http1 or h2c.
+            - name: http1
+              containerPort: {{ .Values.ssr.port }}
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: {{ .Values.ssr.port | quote }}
+            # The public host arrives here in X-Forwarded-Host (the edge proxy
+            # sets it), and cache keys are host-scoped.
+            - name: HOST_HEADER
+              value: "x-forwarded-host"
+            - name: PROTOCOL_HEADER
+              value: "x-forwarded-proto"
+            {{- include "weeb-ssr.sharedCacheEnv" . | nindent 12 }}
+            - name: CACHE_DEFAULT_TTL
+              value: {{ .Values.cache.defaultTtl | quote }}
+            - name: CACHE_DEFAULT_SWR
+              value: {{ .Values.cache.defaultSwr | quote }}
+            - name: CACHE_MAX_TTL
+              value: {{ .Values.cache.maxTtl | quote }}
+            - name: CACHE_MAX_BODY_BYTES
+              value: {{ .Values.cache.maxBodyBytes | quote }}
+            - name: CACHE_LOCK_WAIT
+              value: {{ .Values.cache.lockWait | quote }}
+            {{- if or .Values.cache.purgeToken .Values.cache.existingSecret }}
+            - name: CACHE_PURGE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "weeb-ssr.purgeSecretName" . }}
+                  key: {{ .Values.cache.existingSecretKey }}
+            {{- end }}
+            {{- with .Values.ssr.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              # Unauthenticated by design, and it doesn't touch Redis — a pod
+              # with a broken cache should still be marked ready and serve
+              # uncached, rather than fail out of the rotation.
+              path: /_cache/health
+              port: {{ .Values.ssr.port }}
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.ssr.resources | nindent 12 }}
+          {{- if .Values.appConfig.enabled }}
+          volumeMounts:
+            {{- range .Values.appConfig.mountPaths }}
+            - name: app-config
+              mountPath: {{ . }}
+              subPath: config.json
+            {{- end }}
+          {{- end }}
+      {{- if .Values.appConfig.enabled }}
+      volumes:
+        - name: app-config
+          configMap:
+            name: {{ include "weeb-ssr.fullname" . }}-config
+      {{- end }}

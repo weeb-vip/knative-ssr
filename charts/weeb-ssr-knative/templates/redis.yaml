@@ -1,0 +1,124 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "weeb-ssr.redisName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    protected-mode no
+
+    # This is a cache. Everything in it can be rebuilt by rendering, so an
+    # eviction is a cache miss rather than data loss — which is exactly why it
+    # gets its own instance instead of sharing the app's Redis, where an
+    # eviction policy like this would be destructive.
+    maxmemory {{ .Values.redis.maxmemory }}
+    maxmemory-policy {{ .Values.redis.maxmemoryPolicy }}
+
+    # No persistence: nothing to fsync, no RDB fork stalls, and a restart simply
+    # starts cold.
+    save ""
+    appendonly no
+
+    # A page render can be a couple of MB; the default proto-max-bulk-len is
+    # fine, but the output buffer limit for normal clients is not generous
+    # enough for a burst of large MGETs.
+    client-output-buffer-limit normal 0 0 0
+
+    tcp-keepalive 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "weeb-ssr.redisName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: redis
+  ports:
+    - name: tcp-redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "weeb-ssr.redisName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    # Never run two: a second pod would serve a cold, divergent cache to half
+    # the callers while the first is still up.
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.istio.sidecarInject }}
+        sidecar.istio.io/inject: "true"
+        {{- end }}
+        # Derived from the values that feed redis.conf rather than from the
+        # rendered ConfigMap — this template *is* that file, so including it
+        # here would recurse.
+        checksum/config: {{ printf "%s|%s|%s" .Values.redis.maxmemory .Values.redis.maxmemoryPolicy .Values.redis.image | sha256sum }}
+      labels:
+        {{- include "weeb-ssr.labels" . | nindent 8 }}
+        app.kubernetes.io/component: redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          args: ["/etc/redis/redis.conf"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 4
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/redis
+            - name: data
+              mountPath: /data
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 999
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "weeb-ssr.redisName" . }}
+        - name: data
+          # In-memory only, deliberately. See the config above.
+          emptyDir: {}
+{{- end }}

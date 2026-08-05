@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-domain
+  namespace: knative-serving
+  labels:
+    serving.knative.dev/release: devel
+data:
+  # Every Knative Service in this cluster is cluster-local — external traffic
+  # reaches the app through the edge proxy and the existing Istio Gateway, not
+  # through a Knative-managed route. svc.cluster.local is the magic value that
+  # tells Knative not to publish anything externally by default.
+  #
+  # If you later want Knative to own a public hostname directly, add it here
+  # (e.g. `weeb.vip: ""`) and drop the cluster-local label from the ksvc.
+  svc.cluster.local: ""

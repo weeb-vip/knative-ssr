@@ -1,0 +1,231 @@
+# Default values for weeb-ssr-knative.
+#
+# Topology:
+#
+#   Istio Gateway ─► edge-cache (Deployment, always on)
+#                         │
+#                         ├─ Redis HIT  ─► response          SSR stays asleep
+#                         └─ MISS       ─► Knative Service ─► SSR pod (minScale 0)
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Cache namespace, shared by the SSR pods and the edge proxy. Every cache key is
+# prefixed with it, so changing it atomically invalidates the whole cache.
+#
+# Leave empty to use the SSR image tag, which is what you want: a new image
+# cannot serve HTML rendered by the previous one (that HTML references
+# /_app/immutable chunks the new image doesn't have). Pin it to a fixed string
+# only when you know a release cannot change rendered output and you want the
+# cache to survive the deploy.
+cacheVersion: ""
+
+# ---------------------------------------------------------------------------
+# SSR — the Knative Service
+# ---------------------------------------------------------------------------
+ssr:
+  image:
+    repository: harbor.floret.dev/weeb-vip/weeb-frontend
+    tag: "1.98.0"
+    pullPolicy: IfNotPresent
+
+  imagePullSecrets:
+    - name: harbor
+
+  port: 3000
+
+  autoscaling:
+    # 0 = scale to zero. Safe here because the edge tier answers cache hits
+    # without waking a pod; only a miss pays the cold start.
+    minScale: 0
+    maxScale: 10
+    # Concurrent requests per pod before Knative adds another. Node is
+    # single-threaded and SSR is CPU-bound, so this is much lower than the
+    # default 100 — overshooting queues requests behind the event loop.
+    target: 50
+    metric: concurrency
+    scaleToZeroGracePeriod: 60s
+    # Keep a pod for a while after the last request; repeated cold starts are
+    # worse than a minute of idle memory.
+    scaleToZeroPodRetentionPeriod: 5m
+    window: 60s
+
+  # Hard per-pod ceiling. 0 = no limit, let the autoscaler decide.
+  containerConcurrency: 0
+  timeoutSeconds: 60
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+
+  # OTEL wiring carried over from the existing Deployment.
+  env:
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      value: tempo-distributor.monitoring.svc.cluster.local:4317
+    - name: OTEL_SERVICE_NAME
+      value: weeb-frontend
+    - name: OTEL_ENVIRONMENT
+      value: staging
+    - name: OTEL_ENABLED
+      value: "true"
+
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+
+# ---------------------------------------------------------------------------
+# Edge cache — the always-on tier
+# ---------------------------------------------------------------------------
+edge:
+  enabled: true
+
+  image:
+    repository: harbor.floret.dev/weeb-vip/edge-cache
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+
+  imagePullSecrets:
+    - name: harbor
+
+  replicas: 2
+
+  # Tiny on purpose — this is the thing that stays up so the SSR pods don't
+  # have to. A Redis GET and a byte copy needs very little.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 500m
+      memory: 128Mi
+
+  # Must exceed SSR cold start, since a miss waits for a pod to come up.
+  upstreamTimeout: 30000
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  podAnnotations: {}
+
+# ---------------------------------------------------------------------------
+# Redis — dedicated cache instance
+# ---------------------------------------------------------------------------
+redis:
+  # Set false and provide `external` to point at an existing Redis.
+  enabled: true
+  external: ""
+
+  image: redis:7-alpine
+
+  # No persistence: this is a cache. Everything in it is reconstructible by
+  # rendering, so an AOF/RDB would buy nothing and cost disk plus fsync stalls.
+  # Configured as an LRU so a full cache evicts instead of erroring.
+  maxmemory: 512mb
+  maxmemoryPolicy: allkeys-lru
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 640Mi   # headroom over maxmemory for Redis overhead
+
+# ---------------------------------------------------------------------------
+# Cache behaviour — injected into BOTH the SSR pods and the edge proxy
+# ---------------------------------------------------------------------------
+cache:
+  enabled: true
+  keyPrefix: ssr
+
+  # 0 = opt-in only. Routes cache by calling platform.cache.ttl(n) or setting
+  # s-maxage. Raising this caches every route, including ones never audited for
+  # personalisation — do that deliberately, not as a default.
+  defaultTtl: 0
+  defaultSwr: 0
+  maxTtl: 86400
+  maxBodyBytes: 2097152
+
+  # Cookies that mark a request as logged-in. A request carrying any of these is
+  # never served a shared cache entry. Kept in sync with
+  # src/lib/server/auth-cookies.ts in weeb-frontend.
+  authCookies:
+    - auth_token
+    - access_token
+    - refresh_token
+    - authToken
+    - refreshToken
+    - session
+    - auth
+    - user
+
+  ignoredParams:
+    - utm_source
+    - utm_medium
+    - utm_campaign
+    - utm_term
+    - utm_content
+    - utm_id
+    - gclid
+    - fbclid
+    - msclkid
+    - ref
+    - _ga
+
+  # Request headers included in the cache key. A response that Varies on
+  # anything outside this list is refused rather than stored under a key that
+  # ignores the variation.
+  varyHeaders: []
+
+  # Bearer token for POST /_cache/purge and GET /_cache/stats.
+  # Admin routes are disabled entirely when this is unset.
+  # Prefer existingSecret so the token isn't in values.yaml in git.
+  purgeToken: ""
+  existingSecret: ""
+  existingSecretKey: purge-token
+
+  debugHeaders: true
+
+  lockTtl: 10000
+  lockWait: 5000
+  commandTimeout: 200
+
+# ---------------------------------------------------------------------------
+# Ingress (Istio) — matches the existing weeb-frontend-staging setup
+# ---------------------------------------------------------------------------
+istio:
+  enabled: true
+  host: staging.weeb.vip
+
+  gateway:
+    # false = reuse an existing Gateway by name instead of creating one
+    create: true
+    name: ""
+    selector:
+      istio: ingressgateway
+    credentialName: weeb-frontend-staging-cert
+    httpsRedirect: true
+
+  sidecarInject: true
+
+# ---------------------------------------------------------------------------
+# App runtime config, mounted as config.json (mirrors the existing ConfigMap)
+# ---------------------------------------------------------------------------
+appConfig:
+  enabled: true
+  mountPaths:
+    - /app/build/client/config.json
+  data:
+    api_host: https://weeb-api.staging.weeb.vip
+    graphql_host: https://gateway.staging.weeb.vip/graphql
+    flagsmith_environment_id: iGDuMWWgQMBw8SqEuebtsD
+    algolia_index: anime-staging
+    cdn_url: https://staging.cdn.weeb.vip/weeb-staging
+    cdn_user_url: https://cdn.weeb.vip/weeb-user-staging
+    posthog_api_key: phc_MbyMDQJkiLR9NSfSGSpEhA1RSwu79mROuedzQvxgxoI
+    environment: staging

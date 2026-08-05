@@ -1,0 +1,15 @@
+apiVersion: v2
+name: weeb-ssr-knative
+description: SSR on Knative Serving with a Redis page cache and an always-on edge tier
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - sveltekit
+  - knative
+  - ssr
+  - redis
+  - isr
+maintainers:
+  - name: weeb-vip
+    url: https://github.com/weeb-vip/knative-ssr

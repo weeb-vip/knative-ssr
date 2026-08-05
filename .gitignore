@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+*.tgz
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+charts/**/charts/
+charts/**/*.lock
