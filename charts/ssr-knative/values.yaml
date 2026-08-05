@@ -145,6 +145,16 @@ edge:
     enabled: true
     minAvailable: 1
 
+  # Prometheus Operator discovery. Set false if you scrape by pod annotation
+  # instead — the Deployment carries prometheus.io/scrape either way.
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+    # Some Prometheus installs only select ServiceMonitors carrying a specific
+    # label (spec.serviceMonitorSelector). Add it here if yours does.
+    labels: {}
+
   podAnnotations: {}
 
 # ---------------------------------------------------------------------------

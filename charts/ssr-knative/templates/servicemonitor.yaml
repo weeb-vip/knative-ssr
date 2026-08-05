@@ -1,0 +1,32 @@
+{{- if and .Values.edge.enabled .Values.edge.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "ssr-knative.edgeName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ssr-knative.labels" . | nindent 4 }}
+    app.kubernetes.io/component: edge
+    {{- with .Values.edge.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "ssr-knative.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: edge
+  endpoints:
+    - port: http-edge
+      path: /_edge/metrics
+      interval: {{ .Values.edge.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.edge.serviceMonitor.scrapeTimeout }}
+      # Every replica keeps its own counters — they are per-process, not shared
+      # through Redis — so the pod must be a distinguishable series or the
+      # replicas overwrite each other and rates come out wrong.
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+{{- end }}

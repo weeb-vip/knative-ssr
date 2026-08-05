@@ -40,6 +40,9 @@ import (
 )
 
 type metrics struct {
+	requestDuration  *labelled
+	upstreamDuration *histogram
+
 	hit        atomic.Int64
 	stale      atomic.Int64
 	miss       atomic.Int64
@@ -78,6 +81,7 @@ func main() {
 		cfg:      cfg,
 		cache:    cache,
 		upstream: upstream,
+		m:        metrics{requestDuration: newLabelled(), upstreamDuration: newHistogram()},
 		client: &http.Client{
 			Timeout: cfg.UpstreamTimeout,
 			Transport: &http.Transport{
@@ -99,13 +103,17 @@ func main() {
 			// honest; Istio will surface it and the retry lands on a warm pod.
 			http.Error(w, "Bad Gateway", http.StatusBadGateway)
 		},
-		Transport: &http.Transport{
-			MaxIdleConns:        200,
-			MaxIdleConnsPerHost: 100,
-			IdleConnTimeout:     90 * time.Second,
-			// Waking a scaled-to-zero pod goes through Knative's activator, which
-			// holds the connection while the pod starts. Must exceed cold-start.
-			ResponseHeaderTimeout: cfg.UpstreamTimeout,
+		Transport: &timedTransport{
+			m: &s.m,
+			next: &http.Transport{
+				MaxIdleConns:        200,
+				MaxIdleConnsPerHost: 100,
+				IdleConnTimeout:     90 * time.Second,
+				// Waking a scaled-to-zero pod goes through Knative's activator,
+				// which holds the connection while the pod starts. Must exceed
+				// cold-start.
+				ResponseHeaderTimeout: cfg.UpstreamTimeout,
+			},
 		},
 	}
 
@@ -161,6 +169,10 @@ func (s *server) director(r *http.Request) {
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
+	outcome := "bypass"
+	defer func() { s.m.observe(outcome, started) }()
+
 	switch r.URL.Path {
 	case "/_edge/healthz":
 		w.Header().Set("content-type", "application/json")
@@ -205,12 +217,14 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if entry, ok := s.cache.Get(r.Context(), keys); ok && entry.mayServe(authenticated) {
 		switch entry.freshness(time.Now()) {
 		case Fresh:
+			outcome = "hit"
 			s.m.hit.Add(1)
 			s.writeEntry(w, r, entry, "HIT")
 			return
 
 		case Stale:
 			if s.cfg.StaleWhileRevalidate {
+				outcome = "stale"
 				s.m.stale.Add(1)
 				// Serve now, wake the SSR pod behind the response. The visitor pays
 				// nothing for the staleness and the pod re-stores the fresh render.
@@ -221,6 +235,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	outcome = "miss"
 	s.m.miss.Add(1)
 	s.setCacheHeader(w, "MISS")
 	s.m.upstream.Add(1)
@@ -412,21 +427,4 @@ func (s *server) revalidate(kb keyBase, original *http.Request, authenticated bo
 	// Draining matters: the SSR pod only stores the entry once it has finished
 	// writing the response.
 	_, _ = io.Copy(io.Discard, resp.Body)
-}
-
-func (s *server) writeMetrics(w http.ResponseWriter) {
-	w.Header().Set("content-type", "text/plain; version=0.0.4")
-
-	write := func(name, help string, value int64) {
-		fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s counter\n%s %d\n", name, help, name, name, value)
-	}
-
-	write("edge_cache_hits_total", "Responses served fresh from Redis.", s.m.hit.Load())
-	write("edge_cache_stale_total", "Responses served stale while revalidating.", s.m.stale.Load())
-	write("edge_cache_misses_total", "Cacheable requests with no usable entry.", s.m.miss.Load())
-	write("edge_cache_bypass_total", "Requests ineligible for caching.", s.m.bypass.Load())
-	write("edge_cache_revalidations_total", "Background revalidations started.", s.m.revalidate.Load())
-	write("edge_cache_stored_total", "Origin responses cached by the proxy.", s.m.stored.Load())
-	write("edge_upstream_requests_total", "Requests forwarded to the SSR service.", s.m.upstream.Load())
-	write("edge_errors_total", "Proxy and upstream errors.", s.m.errors.Load())
 }
