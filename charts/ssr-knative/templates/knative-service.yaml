@@ -15,10 +15,10 @@ spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/min-scale: {{ .Values.ssr.autoscaling.minScale | quote }}
-        autoscaling.knative.dev/max-scale: {{ .Values.ssr.autoscaling.maxScale | quote }}
+        autoscaling.knative.dev/min-scale: {{ .Values.ssr.autoscaling.minScale | int64 | quote }}
+        autoscaling.knative.dev/max-scale: {{ .Values.ssr.autoscaling.maxScale | int64 | quote }}
         autoscaling.knative.dev/metric: {{ .Values.ssr.autoscaling.metric | quote }}
-        autoscaling.knative.dev/target: {{ .Values.ssr.autoscaling.target | quote }}
+        autoscaling.knative.dev/target: {{ .Values.ssr.autoscaling.target | int64 | quote }}
         autoscaling.knative.dev/window: {{ .Values.ssr.autoscaling.window | quote }}
         autoscaling.knative.dev/scale-to-zero-grace-period: {{ .Values.ssr.autoscaling.scaleToZeroGracePeriod | quote }}
         autoscaling.knative.dev/scale-to-zero-pod-retention-period: {{ .Values.ssr.autoscaling.scaleToZeroPodRetentionPeriod | quote }}
@@ -83,15 +83,15 @@ spec:
             # Only meaningful to an adapter. A standalone app ignores these and
             # controls caching through response headers instead.
             - name: CACHE_DEFAULT_TTL
-              value: {{ .Values.cache.defaultTtl | quote }}
+              value: {{ .Values.cache.defaultTtl | int64 | quote }}
             - name: CACHE_DEFAULT_SWR
-              value: {{ .Values.cache.defaultSwr | quote }}
+              value: {{ .Values.cache.defaultSwr | int64 | quote }}
             - name: CACHE_MAX_TTL
-              value: {{ .Values.cache.maxTtl | quote }}
+              value: {{ .Values.cache.maxTtl | int64 | quote }}
             - name: CACHE_MAX_BODY_BYTES
-              value: {{ .Values.cache.maxBodyBytes | quote }}
+              value: {{ .Values.cache.maxBodyBytes | int64 | quote }}
             - name: CACHE_LOCK_WAIT
-              value: {{ .Values.cache.lockWait | quote }}
+              value: {{ .Values.cache.lockWait | int64 | quote }}
             {{- if or .Values.cache.purgeToken .Values.cache.existingSecret }}
             - name: CACHE_PURGE_TOKEN
               valueFrom:

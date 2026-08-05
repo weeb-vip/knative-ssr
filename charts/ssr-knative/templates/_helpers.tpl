@@ -92,9 +92,9 @@ pods never write, and the hit rate silently goes to zero.
 - name: CACHE_DEBUG_HEADERS
   value: {{ .Values.cache.debugHeaders | quote }}
 - name: CACHE_LOCK_TTL
-  value: {{ .Values.cache.lockTtl | quote }}
+  value: {{ .Values.cache.lockTtl | int64 | quote }}
 - name: CACHE_COMMAND_TIMEOUT
-  value: {{ .Values.cache.commandTimeout | quote }}
+  value: {{ .Values.cache.commandTimeout | int64 | quote }}
 - name: CACHE_ADMIN_PATH
   value: "/_cache"
 {{- end -}}

@@ -86,7 +86,7 @@ spec:
             - name: UPSTREAM
               value: {{ include "ssr-knative.ssrUpstream" . | quote }}
             - name: UPSTREAM_TIMEOUT
-              value: {{ .Values.edge.upstreamTimeout | quote }}
+              value: {{ .Values.edge.upstreamTimeout | int64 | quote }}
             - name: HOST_HEADER
               value: "x-forwarded-host"
             # Standalone mode: cache origin responses from their headers, for
@@ -95,9 +95,9 @@ spec:
             - name: CACHE_EDGE_WRITE
               value: {{ .Values.edge.write | quote }}
             - name: CACHE_MAX_TTL
-              value: {{ .Values.cache.maxTtl | quote }}
+              value: {{ .Values.cache.maxTtl | int64 | quote }}
             - name: CACHE_MAX_BODY_BYTES
-              value: {{ .Values.cache.maxBodyBytes | quote }}
+              value: {{ .Values.cache.maxBodyBytes | int64 | quote }}
             {{- include "ssr-knative.sharedCacheEnv" . | nindent 12 }}
           readinessProbe:
             httpGet:
