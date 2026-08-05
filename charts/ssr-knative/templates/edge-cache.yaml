@@ -2,14 +2,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "weeb-ssr.edgeName" . }}
+  name: {{ include "ssr-knative.edgeName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    {{- include "ssr-knative.labels" . | nindent 4 }}
     app.kubernetes.io/component: edge
 spec:
   selector:
-    app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+    app.kubernetes.io/name: {{ include "ssr-knative.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: edge
   ports:
@@ -21,10 +21,10 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "weeb-ssr.edgeName" . }}
+  name: {{ include "ssr-knative.edgeName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    {{- include "ssr-knative.labels" . | nindent 4 }}
     app.kubernetes.io/component: edge
 spec:
   replicas: {{ .Values.edge.replicas }}
@@ -35,7 +35,7 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+      app.kubernetes.io/name: {{ include "ssr-knative.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/component: edge
   template:
@@ -49,12 +49,12 @@ spec:
         prometheus.io/path: "/_edge/metrics"
         # Roll the edge pods whenever cache-affecting config changes, so the two
         # tiers never disagree about how a key is built.
-        checksum/cache-config: {{ include "weeb-ssr.sharedCacheEnv" . | sha256sum }}
+        checksum/cache-config: {{ include "ssr-knative.sharedCacheEnv" . | sha256sum }}
         {{- with .Values.edge.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "weeb-ssr.labels" . | nindent 8 }}
+        {{- include "ssr-knative.labels" . | nindent 8 }}
         app.kubernetes.io/component: edge
     spec:
       {{- with .Values.edge.imagePullSecrets }}
@@ -69,7 +69,7 @@ spec:
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
-              app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+              app.kubernetes.io/name: {{ include "ssr-knative.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
               app.kubernetes.io/component: edge
       containers:
@@ -84,12 +84,21 @@ spec:
             - name: LISTEN
               value: ":8080"
             - name: UPSTREAM
-              value: {{ include "weeb-ssr.ssrUpstream" . | quote }}
+              value: {{ include "ssr-knative.ssrUpstream" . | quote }}
             - name: UPSTREAM_TIMEOUT
               value: {{ .Values.edge.upstreamTimeout | quote }}
             - name: HOST_HEADER
               value: "x-forwarded-host"
-            {{- include "weeb-ssr.sharedCacheEnv" . | nindent 12 }}
+            # Standalone mode: cache origin responses from their headers, for
+            # apps with no framework adapter. Responses marked X-Cache-Origin
+            # are skipped so an adapter's own writes are not duplicated.
+            - name: CACHE_EDGE_WRITE
+              value: {{ .Values.edge.write | quote }}
+            - name: CACHE_MAX_TTL
+              value: {{ .Values.cache.maxTtl | quote }}
+            - name: CACHE_MAX_BODY_BYTES
+              value: {{ .Values.cache.maxBodyBytes | quote }}
+            {{- include "ssr-knative.sharedCacheEnv" . | nindent 12 }}
           readinessProbe:
             httpGet:
               path: /_edge/healthz
@@ -116,16 +125,16 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "weeb-ssr.edgeName" . }}
+  name: {{ include "ssr-knative.edgeName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    {{- include "ssr-knative.labels" . | nindent 4 }}
     app.kubernetes.io/component: edge
 spec:
   minAvailable: {{ .Values.edge.podDisruptionBudget.minAvailable }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+      app.kubernetes.io/name: {{ include "ssr-knative.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/component: edge
 {{- end }}

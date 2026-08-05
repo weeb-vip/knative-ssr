@@ -2,16 +2,27 @@
 // SSR service.
 //
 // It answers cache hits straight from Redis without waking an SSR pod, and
-// proxies everything else upstream. It is deliberately dumb: it never writes
-// cache entries and knows nothing about the framework. The adapter is the only
-// writer, because it is the only side that knows the render, the tags and the
-// TTL.
+// proxies everything else upstream. It knows nothing about any framework.
 //
 //	Istio ──► edge-cache ──HIT──► Redis ──► response      (SSR pod stays asleep)
 //	                     └─MISS─► Knative Service ──► SSR pod
+//
+// Two modes, decided per response:
+//
+//   - Adapter mode. The origin writes its own entries (it knows the render, the
+//     cache tags and the TTL) and marks responses with X-Cache-Origin. The proxy
+//     reads only.
+//   - Standalone mode. The origin has no adapter — any Next, Nuxt, Astro or
+//     hand-rolled SSR server. The proxy stores responses itself based on
+//     Cache-Control: s-maxage / stale-while-revalidate, plus optional
+//     X-Cache-Tag and X-Cache-Segment headers. See policy.go.
+//
+// The same segmentation rules apply in both modes: a response rendered for a
+// logged-in user never lands in a shared segment.
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -35,6 +46,7 @@ type metrics struct {
 	bypass     atomic.Int64
 	revalidate atomic.Int64
 	upstream   atomic.Int64
+	stored     atomic.Int64
 	errors     atomic.Int64
 }
 
@@ -77,8 +89,9 @@ func main() {
 	}
 
 	s.proxy = &httputil.ReverseProxy{
-		Director:      s.director,
-		FlushInterval: -1, // stream SSR responses through rather than buffering
+		Director:       s.director,
+		ModifyResponse: s.storeResponse,
+		FlushInterval:  -1, // stream SSR responses through rather than buffering
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			s.m.errors.Add(1)
 			log.Printf("[proxy] %s %s: %v", r.Method, r.URL.Path, err)
@@ -211,7 +224,95 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.m.miss.Add(1)
 	s.setCacheHeader(w, "MISS")
 	s.m.upstream.Add(1)
-	s.proxy.ServeHTTP(w, r)
+
+	// Carry the key and auth state into ModifyResponse, which is where an
+	// adapter-less origin's response gets stored.
+	s.proxy.ServeHTTP(w, r.WithContext(withRequestState(r.Context(), &requestState{
+		key:           kb,
+		authenticated: authenticated,
+	})))
+}
+
+type ctxKey struct{}
+
+type requestState struct {
+	key           keyBase
+	authenticated bool
+}
+
+func withRequestState(ctx context.Context, st *requestState) context.Context {
+	return context.WithValue(ctx, ctxKey{}, st)
+}
+
+func requestStateFrom(ctx context.Context) *requestState {
+	st, _ := ctx.Value(ctxKey{}).(*requestState)
+	return st
+}
+
+// storeResponse caches an origin response when policy allows.
+//
+// This is the framework-agnostic path: an SSR app of any stack gets caching by
+// emitting `Cache-Control: s-maxage=…` (or X-Cache-TTL) and optionally
+// X-Cache-Tag, with no adapter involved. Responses from an origin that manages
+// its own cache are left alone.
+func (s *server) storeResponse(resp *http.Response) error {
+	// Our control headers are transport between origin and proxy, not part of
+	// the app's output — strip them on the way out regardless of what we decide.
+	defer stripControlHeaders(resp.Header)
+
+	if !s.cfg.WriteEnabled {
+		return nil
+	}
+
+	st := requestStateFrom(resp.Request.Context())
+	if st == nil {
+		return nil // admin or bypass path; nothing to key on
+	}
+
+	decision := DecideStorage(resp, st.authenticated, s.cfg)
+	if decision == nil {
+		return nil
+	}
+
+	// Buffer only once we've decided to store. Uncacheable responses keep
+	// streaming straight through to the client.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, s.cfg.MaxBodyBytes+1))
+	if err != nil {
+		resp.Body.Close()
+		return err
+	}
+	resp.Body.Close()
+
+	if int64(len(body)) > s.cfg.MaxBodyBytes {
+		// Too large to cache, but the client still needs it.
+		resp.Body = io.NopCloser(bytes.NewReader(body))
+		return nil
+	}
+
+	resp.Body = io.NopCloser(bytes.NewReader(body))
+	resp.ContentLength = int64(len(body))
+
+	entry := &Entry{
+		Status:   resp.StatusCode,
+		Headers:  storableHeaders(resp.Header),
+		Body:     body,
+		Segment:  decision.Segment,
+		TTL:      decision.TTL,
+		SWR:      decision.SWR,
+		Tags:     decision.Tags,
+		StoredAt: time.Now().UnixMilli(),
+		Build:    s.cfg.Version,
+	}
+
+	key := st.key.key(decision.Segment)
+	if err := s.cache.Set(resp.Request.Context(), key, entry); err != nil {
+		// Failing to cache must never fail the request.
+		log.Printf("[cache] store %s: %v", key, err)
+		return nil
+	}
+
+	s.m.stored.Add(1)
+	return nil
 }
 
 // cacheable is the cheap pre-check, mirroring request_is_cacheable in policy.js.
@@ -325,6 +426,7 @@ func (s *server) writeMetrics(w http.ResponseWriter) {
 	write("edge_cache_misses_total", "Cacheable requests with no usable entry.", s.m.miss.Load())
 	write("edge_cache_bypass_total", "Requests ineligible for caching.", s.m.bypass.Load())
 	write("edge_cache_revalidations_total", "Background revalidations started.", s.m.revalidate.Load())
+	write("edge_cache_stored_total", "Origin responses cached by the proxy.", s.m.stored.Load())
 	write("edge_upstream_requests_total", "Requests forwarded to the SSR service.", s.m.upstream.Load())
 	write("edge_errors_total", "Proxy and upstream errors.", s.m.errors.Load())
 }

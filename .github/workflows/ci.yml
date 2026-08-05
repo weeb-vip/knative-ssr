@@ -6,19 +6,8 @@ on:
   pull_request:
 
 jobs:
-  adapter:
-    name: Adapter (Node)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm install --no-audit --no-fund --legacy-peer-deps
-      - run: npm test
-
   edge:
-    name: Edge proxy (Go)
+    name: Edge proxy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,30 +17,32 @@ jobs:
           cache-dependency-path: edge/go.sum
       - run: go vet ./...
         working-directory: edge
+      # Covers the key format, the storage policy and segment isolation, and
+      # asserts spec/key-vectors.json is current.
       - run: go test ./...
         working-directory: edge
 
-  contract:
-    name: Key format contract
+  spec:
+    name: Cache-key spec is committed current
     runs-on: ubuntu-latest
-    # The Go and JS key builders must agree byte-for-byte. A mismatch does not
-    # error at runtime — it silently drops the hit rate to zero — so this job
-    # regenerates the vectors from the JS side and re-asserts them in Go. If it
-    # fails, someone changed one implementation without the other.
+    # The published spec is what every adapter tests against. If it drifts from
+    # the implementation here, adapters validate against a lie.
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
           cache-dependency-path: edge/go.sum
-      - run: node scripts/gen-key-vectors.mjs
-      - name: Vectors must be committed up to date
-        run: git diff --exit-code test/key-vectors.json
-      - run: go test ./...
+      - run: go test ./... -run TestSpecVectors -update
         working-directory: edge
+      - name: Spec must already be up to date
+        run: |
+          if ! git diff --exit-code spec/key-vectors.json; then
+            echo "::error::spec/key-vectors.json is stale. Regenerate with:"
+            echo "  cd edge && go test ./... -run TestSpecVectors -update"
+            echo "and bump SpecVersion if the key format itself changed."
+            exit 1
+          fi
 
   chart:
     name: Helm chart
@@ -59,27 +50,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
-      - run: helm lint charts/weeb-ssr-knative
-      - name: Render with defaults
+
+      - run: |
+          helm lint charts/ssr-knative \
+            --set ssr.image.repository=example/app \
+            --set ssr.image.tag=1.0.0 \
+            --set istio.host=app.example.com
+
+      - name: Worked examples must render
         run: |
-          helm template weeb-frontend charts/weeb-ssr-knative \
-            -n weeb-staging \
-            --set fullnameOverride=weeb-frontend \
-            --set cache.purgeToken=ci > /dev/null
+          for f in charts/ssr-knative/examples/*.yaml; do
+            echo "--- $f"
+            helm template app charts/ssr-knative -n web -f "$f" \
+              --set ssr.image.tag=ci > /dev/null
+          done
+
       - name: Render without the edge tier
         run: |
-          helm template weeb-frontend charts/weeb-ssr-knative \
-            -n weeb-staging \
-            --set fullnameOverride=weeb-frontend \
+          helm template app charts/ssr-knative -n web \
+            --set ssr.image.repository=example/app \
+            --set ssr.image.tag=ci \
+            --set istio.host=app.example.com \
             --set edge.enabled=false \
             --set ssr.autoscaling.minScale=1 > /dev/null
+
       - name: Render with an external Redis
         run: |
-          helm template weeb-frontend charts/weeb-ssr-knative \
-            -n weeb-staging \
-            --set fullnameOverride=weeb-frontend \
+          helm template app charts/ssr-knative -n web \
+            --set ssr.image.repository=example/app \
+            --set ssr.image.tag=ci \
+            --set istio.host=app.example.com \
             --set redis.enabled=false \
             --set redis.external=redis://elsewhere:6379 > /dev/null
+
+      - name: Required values must fail loudly
+        run: |
+          if helm template app charts/ssr-knative -n web > /dev/null 2>&1; then
+            echo "::error::chart rendered with no image or host set"
+            exit 1
+          fi
 
   image:
     name: Build edge image

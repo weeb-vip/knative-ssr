@@ -9,7 +9,7 @@ import (
 
 // These tests assert that the Go key builder produces byte-identical output to
 // the JavaScript one in src/runtime/key.js. The vectors are generated from the
-// JS side (node scripts/gen-key-vectors.mjs), so a drift in either direction
+// JS side (go test ./... -run TestSpecVectors -update), so a drift in either direction
 // fails here.
 //
 // This matters more than it looks: a key mismatch doesn't error, it just makes
@@ -50,9 +50,9 @@ type vectors struct {
 func load(t *testing.T) vectors {
 	t.Helper()
 
-	raw, err := os.ReadFile("../test/key-vectors.json")
+	raw, err := os.ReadFile("../spec/key-vectors.json")
 	if err != nil {
-		t.Fatalf("read vectors (run: node scripts/gen-key-vectors.mjs): %v", err)
+		t.Fatalf("read vectors (run: go test ./... -run TestSpecVectors -update): %v", err)
 	}
 
 	var v vectors

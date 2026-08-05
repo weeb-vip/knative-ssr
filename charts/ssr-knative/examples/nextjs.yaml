@@ -1,0 +1,57 @@
+# A Next.js app, standalone mode — no adapter, no framework integration.
+#
+# The edge proxy caches responses from their headers alone, so this works with
+# any Next version and any router. Build with `output: 'standalone'` so the
+# image runs `node server.js` on PORT.
+#
+#   helm upgrade --install shop charts/ssr-knative \
+#     -n web -f charts/ssr-knative/examples/nextjs.yaml \
+#     --set ssr.image.tag=2024.11.03
+
+fullnameOverride: shop
+
+ssr:
+  image:
+    repository: registry.example.com/acme/shop
+    tag: ""
+  port: 3000
+
+  readinessProbe:
+    # A trivial route handler: `export const GET = () => Response.json({ok:true})`
+    path: /api/health
+
+  env:
+    - name: NODE_ENV
+      value: production
+
+edge:
+  # Nothing else writes entries, so the proxy must.
+  write: true
+
+cache:
+  # next-auth's cookie is __Secure- prefixed over HTTPS and unprefixed locally;
+  # both are listed because getting this wrong caches logged-in pages publicly.
+  authCookies:
+    - next-auth.session-token
+    - __Secure-next-auth.session-token
+    - __Host-next-auth.csrf-token
+
+istio:
+  host: shop.example.com
+  gateway:
+    create: true
+    credentialName: shop-example-com-tls
+
+# Opt a page into caching from the app, with no adapter:
+#
+#   // app/products/[id]/page.tsx  (route segment config)
+#   export const revalidate = 60;
+#
+#   // middleware.ts, or a route handler's Response headers
+#   res.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=600');
+#   res.headers.set('X-Cache-Segment', 'pub');      // shared with logged-in users
+#   res.headers.set('X-Cache-Tag', `product:${id}`); // purgeable by tag
+#
+# Without X-Cache-Segment an anonymous response is cached in the `anon` segment,
+# which logged-in visitors never read. `pub` is the opt-in that says "this HTML
+# is identical for everyone" — only set it on pages that render no user state.

@@ -150,6 +150,50 @@ func (c *Cache) Get(ctx context.Context, keys []string) (*Entry, bool) {
 	return nil, false
 }
 
+// Set stores an entry and indexes its tags.
+//
+// Only used when the origin has no adapter of its own — an adapter writes
+// directly to Redis with better information than the proxy can infer from
+// headers. The key lives for ttl+swr so stale-while-revalidate has something to
+// serve; freshness inside that window is decided from StoredAt.
+func (c *Cache) Set(ctx context.Context, key string, e *Entry) error {
+	if c.tripped() {
+		return nil
+	}
+
+	payload, err := json.Marshal(e)
+	if err != nil {
+		return err
+	}
+
+	total := time.Duration(e.TTL+e.SWR) * time.Second
+
+	ctx, cancel := context.WithTimeout(ctx, c.cfg.RedisTimeout)
+	defer cancel()
+
+	pipe := c.rdb.Pipeline()
+	pipe.Set(ctx, key, payload, total)
+
+	for _, tag := range e.Tags {
+		tk := tagKey(c.cfg.KeyPrefix, c.cfg.Version, tag)
+		pipe.SAdd(ctx, tk, key)
+		// Tag sets outlive their members slightly; without this the set for a hot
+		// page accumulates dead keys forever.
+		expiry := total
+		if expiry < time.Minute {
+			expiry = time.Minute
+		}
+		pipe.PExpire(ctx, tk, expiry)
+	}
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		c.recordFailure(err)
+		return err
+	}
+	c.recordSuccess()
+	return nil
+}
+
 // AcquireLock takes the single-flight lock so only one proxy replica wakes the
 // SSR pod for a given stale page.
 func (c *Cache) AcquireLock(ctx context.Context, key string) bool {

@@ -56,7 +56,7 @@ probe will fail. Build and push a frontend image with the adapter first (see
 Install with Istio disabled so nothing is routed yet:
 
 ```bash
-helm upgrade --install weeb-frontend charts/weeb-ssr-knative \
+helm upgrade --install weeb-frontend charts/ssr-knative \
   -n weeb-staging \
   --set fullnameOverride=weeb-frontend \
   --set ssr.image.tag=<new-tag> \
@@ -88,7 +88,7 @@ kubectl -n weeb-staging run curl --rm -it --image=curlimages/curl --restart=Neve
 Reuse the Gateway you already have instead of creating a second one:
 
 ```bash
-helm upgrade weeb-frontend charts/weeb-ssr-knative \
+helm upgrade weeb-frontend charts/ssr-knative \
   -n weeb-staging \
   --reuse-values \
   --set istio.enabled=true \

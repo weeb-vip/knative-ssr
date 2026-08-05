@@ -34,6 +34,17 @@ type Config struct {
 	// entry is treated as a miss and the visitor waits for the render.
 	StaleWhileRevalidate bool
 
+	// Cache responses from the origin ourselves, based on their headers.
+	//
+	// This is what lets the chart deploy an SSR app of any framework: a Next,
+	// Nuxt or Astro origin gets caching by emitting s-maxage and X-Cache-Tag,
+	// with no adapter at all. Responses carrying X-Cache-Origin are skipped —
+	// an adapter writes its own entries with better information than headers
+	// can carry.
+	WriteEnabled bool
+	MaxTTL       int64
+	MaxBodyBytes int64
+
 	DebugHeaders bool
 	AdminPath    string
 }
@@ -113,6 +124,9 @@ func LoadConfig() Config {
 		LockTTL:         time.Duration(envInt("CACHE_LOCK_TTL", 10000)) * time.Millisecond,
 
 		StaleWhileRevalidate: envBool("CACHE_STALE_WHILE_REVALIDATE", true),
+		WriteEnabled:         envBool("CACHE_EDGE_WRITE", true),
+		MaxTTL:               int64(envInt("CACHE_MAX_TTL", 86400)),
+		MaxBodyBytes:         int64(envInt("CACHE_MAX_BODY_BYTES", 2*1024*1024)),
 		DebugHeaders:         envBool("CACHE_DEBUG_HEADERS", true),
 		AdminPath:            env("CACHE_ADMIN_PATH", "/_cache"),
 	}

@@ -1,11 +1,11 @@
-{{ include "weeb-ssr.fullname" . }} deployed to namespace {{ .Release.Namespace }}.
+{{ include "ssr-knative.fullname" . }} deployed to namespace {{ .Release.Namespace }}.
 
-  Cache namespace : {{ .Values.cache.keyPrefix }}:{{ include "weeb-ssr.cacheVersion" . }}
-  SSR             : {{ include "weeb-ssr.ssrName" . }} (minScale {{ .Values.ssr.autoscaling.minScale }}, maxScale {{ .Values.ssr.autoscaling.maxScale }})
+  Cache namespace : {{ .Values.cache.keyPrefix }}:{{ include "ssr-knative.cacheVersion" . }}
+  SSR             : {{ include "ssr-knative.ssrName" . }} (minScale {{ .Values.ssr.autoscaling.minScale }}, maxScale {{ .Values.ssr.autoscaling.maxScale }})
 {{- if .Values.edge.enabled }}
-  Edge            : {{ include "weeb-ssr.edgeName" . }} ({{ .Values.edge.replicas }} replicas)
+  Edge            : {{ include "ssr-knative.edgeName" . }} ({{ .Values.edge.replicas }} replicas)
 {{- end }}
-  Redis           : {{ include "weeb-ssr.redisUrl" . }}
+  Redis           : {{ include "ssr-knative.redisUrl" . }}
 {{- if .Values.istio.enabled }}
   URL             : https://{{ .Values.istio.host }}
 {{- end }}

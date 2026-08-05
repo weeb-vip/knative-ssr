@@ -253,3 +253,10 @@ func (kb keyBase) lookupKeys(authenticated bool) []string {
 func lockKey(cacheKey string) string {
 	return "lock:" + cacheKey
 }
+
+// tagKey is the Redis set holding every cache key carrying a tag. Must match
+// tag_key in src/runtime/key.js — a purge issued against entries written by the
+// adapter has to find entries written by this proxy, and vice versa.
+func tagKey(prefix, version, tag string) string {
+	return prefix + ":" + version + ":tag:" + tag
+}

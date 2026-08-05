@@ -1,0 +1,266 @@
+# Default values for ssr-knative.
+#
+# Deploys any SSR application — SvelteKit, Next, Nuxt, Astro, Remix, or a
+# hand-rolled Node/Bun/Go server — as long as it serves HTTP on a port.
+#
+#   Istio Gateway ─► edge-cache (Deployment, always on)
+#                         │
+#                         ├─ Redis HIT  ─► response          SSR stays asleep
+#                         └─ MISS       ─► Knative Service ─► SSR pod (minScale 0)
+#
+# Caching works in one of two modes, decided per response:
+#
+#   Standalone  The app emits `Cache-Control: s-maxage=60,
+#               stale-while-revalidate=600` and optionally `X-Cache-Tag` /
+#               `X-Cache-Segment`. The edge proxy stores the response. No
+#               framework integration at all.
+#
+#   Adapter     The app uses a framework adapter (e.g. @weeb-vip/adapter-knative
+#               for SvelteKit) that writes entries itself with per-route tags and
+#               segments. It marks responses with X-Cache-Origin so the proxy
+#               reads only.
+#
+# See examples/ for complete per-application values files.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Cache namespace, shared by the app pods and the edge proxy. Every cache key is
+# prefixed with it, so changing it atomically invalidates the whole cache.
+#
+# Leave empty to use the SSR image tag, which is almost always what you want: a
+# new build must not serve HTML rendered by the previous one, because that HTML
+# references hashed asset URLs the new image doesn't have. Pin it to a fixed
+# string only when a release cannot change rendered output.
+cacheVersion: ""
+
+# ---------------------------------------------------------------------------
+# SSR — the Knative Service
+# ---------------------------------------------------------------------------
+ssr:
+  image:
+    repository: ""   # required, e.g. registry.example.com/org/app
+    tag: ""          # required
+    pullPolicy: IfNotPresent
+
+  imagePullSecrets: []
+
+  # Port the app listens on. Also passed as PORT, which most SSR servers honour.
+  port: 3000
+
+  # Override the image's entrypoint if needed.
+  command: []
+  args: []
+
+  autoscaling:
+    # 0 = scale to zero. Safe when the edge tier is enabled, because it answers
+    # cache hits without waking a pod; only a miss pays the cold start.
+    minScale: 0
+    maxScale: 10
+    # Concurrent requests per pod before Knative adds another. Node is
+    # single-threaded and SSR is CPU-bound, so this is far below Knative's
+    # default of 100 — overshooting queues requests behind the event loop.
+    # Raise it for a runtime with real parallelism.
+    target: 50
+    metric: concurrency
+    scaleToZeroGracePeriod: 60s
+    # Keep a pod around after the last request; repeated cold starts are worse
+    # than a minute of idle memory.
+    scaleToZeroPodRetentionPeriod: 5m
+    window: 60s
+
+  # Hard per-pod ceiling. 0 = no limit, let the autoscaler decide.
+  containerConcurrency: 0
+  timeoutSeconds: 60
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+
+  readinessProbe:
+    # Any path the app answers cheaply without touching a database. Apps using
+    # @weeb-vip/adapter-knative can use /_cache/health, which reports Redis
+    # status without failing the pod when Redis is down.
+    path: /
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  env: []
+  #  - name: NODE_ENV
+  #    value: production
+
+  envFrom: []
+  #  - secretRef:
+  #      name: app-secrets
+
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+
+# ---------------------------------------------------------------------------
+# Edge cache — the always-on tier
+# ---------------------------------------------------------------------------
+edge:
+  # Disabling this routes Istio straight at the Knative Service. Caching still
+  # works, but every hit wakes a pod, so you'd want minScale >= 1.
+  enabled: true
+
+  image:
+    repository: ghcr.io/weeb-vip/knative-ssr-edge
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+
+  imagePullSecrets: []
+
+  replicas: 2
+
+  # Tiny on purpose — this is the thing that stays up so the SSR pods don't
+  # have to. A Redis GET and a byte copy needs very little.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 500m
+      memory: 128Mi
+
+  # Must exceed SSR cold start, since a miss waits for a pod to come up.
+  upstreamTimeout: 30000
+
+  # Let the proxy cache origin responses itself (standalone mode). Set false if
+  # your app has an adapter and you want writes to come only from it.
+  write: true
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  podAnnotations: {}
+
+# ---------------------------------------------------------------------------
+# Redis — dedicated cache instance
+# ---------------------------------------------------------------------------
+redis:
+  # Set false and provide `external` to point at an existing Redis.
+  enabled: true
+  external: ""
+
+  image: redis:7-alpine
+
+  # No persistence: this is a cache. Everything in it is reconstructible by
+  # rendering, so an AOF/RDB would buy nothing and cost disk plus fsync stalls.
+  # Configured as an LRU so a full cache evicts instead of erroring.
+  maxmemory: 512mb
+  maxmemoryPolicy: allkeys-lru
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 640Mi   # headroom over maxmemory for Redis overhead
+
+# ---------------------------------------------------------------------------
+# Cache behaviour — injected into BOTH the app pods and the edge proxy
+# ---------------------------------------------------------------------------
+cache:
+  enabled: true
+  keyPrefix: ssr
+
+  # Only used by adapters. In standalone mode freshness must come from the
+  # response, so an app that sends no s-maxage gets nothing cached.
+  defaultTtl: 0
+  defaultSwr: 0
+
+  maxTtl: 86400
+  maxBodyBytes: 2097152
+
+  # Cookies that mark a request as logged-in. A request carrying any of these is
+  # never served an entry cached for anonymous visitors, and its response is
+  # never stored in a shared segment.
+  #
+  # THIS IS THE MOST IMPORTANT VALUE IN THIS FILE. If your app's session cookie
+  # is not listed, logged-in pages can be cached and served to strangers. Check
+  # it against what your auth actually sets rather than trusting these defaults.
+  authCookies:
+    - session
+    - sessionid
+    - auth
+    - auth_token
+    - access_token
+    - refresh_token
+    - token
+    - jwt
+    - connect.sid
+    - next-auth.session-token
+    - __Secure-next-auth.session-token
+
+  # Query params stripped from the cache key, so a campaign link doesn't
+  # fragment the cache into thousands of identical copies.
+  ignoredParams:
+    - utm_source
+    - utm_medium
+    - utm_campaign
+    - utm_term
+    - utm_content
+    - utm_id
+    - gclid
+    - fbclid
+    - msclkid
+    - ref
+    - _ga
+
+  # Request headers included in the cache key. A response that Varies on
+  # anything outside this list is refused rather than stored under a key that
+  # ignores the variation.
+  varyHeaders: []
+
+  # Bearer token for POST /_cache/purge and GET /_cache/stats (adapter only).
+  # Admin routes are disabled entirely when unset.
+  # Prefer existingSecret so the token isn't in values.yaml in git.
+  purgeToken: ""
+  existingSecret: ""
+  existingSecretKey: purge-token
+
+  debugHeaders: true
+
+  lockTtl: 10000
+  lockWait: 5000
+  commandTimeout: 200
+
+# ---------------------------------------------------------------------------
+# Ingress (Istio)
+# ---------------------------------------------------------------------------
+istio:
+  enabled: true
+  host: ""   # required when enabled, e.g. app.example.com
+
+  gateway:
+    # false = reuse an existing Gateway by name instead of creating one, which
+    # is usually right when the certificate is already managed elsewhere.
+    create: true
+    name: ""
+    selector:
+      istio: ingressgateway
+    credentialName: ""   # TLS secret for the host
+    httpsRedirect: true
+
+  sidecarInject: true
+
+# ---------------------------------------------------------------------------
+# Optional config file mounted into the app
+# ---------------------------------------------------------------------------
+# Renders `data` as JSON into a ConfigMap and mounts it at each path. Useful for
+# apps that read runtime config from a file, so one image serves every
+# environment.
+configFile:
+  enabled: false
+  filename: config.json
+  mountPaths: []
+  data: {}

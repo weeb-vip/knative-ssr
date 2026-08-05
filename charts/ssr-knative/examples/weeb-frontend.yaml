@@ -1,0 +1,77 @@
+# weeb-frontend on staging — SvelteKit with @weeb-vip/adapter-knative.
+#
+#   helm upgrade --install weeb-frontend charts/ssr-knative \
+#     -n weeb-staging -f charts/ssr-knative/examples/weeb-frontend.yaml \
+#     --set ssr.image.tag=1.98.0
+
+fullnameOverride: weeb-frontend
+
+ssr:
+  image:
+    repository: harbor.floret.dev/weeb-vip/weeb-frontend
+    tag: ""   # set per deploy; also becomes the cache namespace
+  imagePullSecrets:
+    - name: harbor
+  port: 3000
+
+  readinessProbe:
+    # Provided by the adapter. Reports Redis status but stays ready when Redis
+    # is down, so a cache outage degrades to uncached SSR rather than an outage.
+    path: /_cache/health
+
+  env:
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      value: tempo-distributor.monitoring.svc.cluster.local:4317
+    - name: OTEL_SERVICE_NAME
+      value: weeb-frontend
+    - name: OTEL_ENVIRONMENT
+      value: staging
+    - name: OTEL_ENABLED
+      value: "true"
+
+edge:
+  image:
+    repository: harbor.floret.dev/weeb-vip/edge-cache
+    tag: "0.1.0"
+  imagePullSecrets:
+    - name: harbor
+  # The adapter writes its own entries, with per-route tags and segments the
+  # proxy can't infer from headers.
+  write: false
+
+cache:
+  # Matches src/lib/server/auth-cookies.ts in weeb-frontend, including the
+  # legacy names AuthStorage still sets on the client.
+  authCookies:
+    - auth_token
+    - access_token
+    - refresh_token
+    - authToken
+    - refreshToken
+    - session
+    - auth
+    - user
+  existingSecret: weeb-frontend-cache
+
+istio:
+  host: staging.weeb.vip
+  gateway:
+    # Reuse the Gateway and certificate that already serve this host, so TLS is
+    # never in flux during the cutover.
+    create: false
+    name: weeb-frontend-staging-gateway
+
+configFile:
+  enabled: true
+  filename: config.json
+  mountPaths:
+    - /app/build/client/config.json
+  data:
+    api_host: https://weeb-api.staging.weeb.vip
+    graphql_host: https://gateway.staging.weeb.vip/graphql
+    flagsmith_environment_id: iGDuMWWgQMBw8SqEuebtsD
+    algolia_index: anime-staging
+    cdn_url: https://staging.cdn.weeb.vip/weeb-staging
+    cdn_user_url: https://cdn.weeb.vip/weeb-user-staging
+    posthog_api_key: phc_MbyMDQJkiLR9NSfSGSpEhA1RSwu79mROuedzQvxgxoI
+    environment: staging

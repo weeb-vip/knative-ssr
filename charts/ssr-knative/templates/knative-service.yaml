@@ -1,10 +1,10 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: {{ include "weeb-ssr.ssrName" . }}
+  name: {{ include "ssr-knative.ssrName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    {{- include "ssr-knative.labels" . | nindent 4 }}
     app.kubernetes.io/component: ssr
     # Cluster-local always: the Istio Gateway and VirtualService in this chart
     # are the only public entry point, so Knative must never publish a route of
@@ -29,7 +29,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "weeb-ssr.labels" . | nindent 8 }}
+        {{- include "ssr-knative.labels" . | nindent 8 }}
         app.kubernetes.io/component: ssr
     spec:
       containerConcurrency: {{ .Values.ssr.containerConcurrency }}
@@ -48,14 +48,27 @@ spec:
       {{- end }}
       containers:
         - name: ssr
-          image: "{{ .Values.ssr.image.repository }}:{{ .Values.ssr.image.tag }}"
+          image: "{{ required "ssr.image.repository is required" .Values.ssr.image.repository }}:{{ required "ssr.image.tag is required" .Values.ssr.image.tag }}"
           imagePullPolicy: {{ .Values.ssr.image.pullPolicy }}
+          {{- with .Values.ssr.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.ssr.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             # Knative requires the name to be http1 or h2c.
             - name: http1
               containerPort: {{ .Values.ssr.port }}
           env:
+            # HOST/PORT cover most Node SSR servers; HOSTNAME is what a Next.js
+            # standalone build reads. Setting all three is harmless and saves a
+            # per-framework special case.
             - name: HOST
+              value: "0.0.0.0"
+            - name: HOSTNAME
               value: "0.0.0.0"
             - name: PORT
               value: {{ .Values.ssr.port | quote }}
@@ -65,7 +78,9 @@ spec:
               value: "x-forwarded-host"
             - name: PROTOCOL_HEADER
               value: "x-forwarded-proto"
-            {{- include "weeb-ssr.sharedCacheEnv" . | nindent 12 }}
+            {{- include "ssr-knative.sharedCacheEnv" . | nindent 12 }}
+            # Only meaningful to an adapter. A standalone app ignores these and
+            # controls caching through response headers instead.
             - name: CACHE_DEFAULT_TTL
               value: {{ .Values.cache.defaultTtl | quote }}
             - name: CACHE_DEFAULT_SWR
@@ -80,35 +95,36 @@ spec:
             - name: CACHE_PURGE_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "weeb-ssr.purgeSecretName" . }}
+                  name: {{ include "ssr-knative.purgeSecretName" . }}
                   key: {{ .Values.cache.existingSecretKey }}
             {{- end }}
             {{- with .Values.ssr.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          {{- with .Values.ssr.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           readinessProbe:
             httpGet:
-              # Unauthenticated by design, and it doesn't touch Redis — a pod
-              # with a broken cache should still be marked ready and serve
-              # uncached, rather than fail out of the rotation.
-              path: /_cache/health
+              path: {{ .Values.ssr.readinessProbe.path | quote }}
               port: {{ .Values.ssr.port }}
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 3
+            periodSeconds: {{ .Values.ssr.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.ssr.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.ssr.readinessProbe.failureThreshold }}
           resources:
             {{- toYaml .Values.ssr.resources | nindent 12 }}
-          {{- if .Values.appConfig.enabled }}
+          {{- if .Values.configFile.enabled }}
           volumeMounts:
-            {{- range .Values.appConfig.mountPaths }}
+            {{- range .Values.configFile.mountPaths }}
             - name: app-config
               mountPath: {{ . }}
-              subPath: config.json
+              subPath: {{ $.Values.configFile.filename }}
             {{- end }}
           {{- end }}
-      {{- if .Values.appConfig.enabled }}
+      {{- if .Values.configFile.enabled }}
       volumes:
         - name: app-config
           configMap:
-            name: {{ include "weeb-ssr.fullname" . }}-config
+            name: {{ include "ssr-knative.fullname" . }}-config
       {{- end }}

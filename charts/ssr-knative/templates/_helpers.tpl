@@ -1,32 +1,32 @@
-{{- define "weeb-ssr.name" -}}
+{{- define "ssr-knative.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "weeb-ssr.fullname" -}}
+{{- define "ssr-knative.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s" .Release.Name (include "weeb-ssr.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s" .Release.Name (include "ssr-knative.name" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
-{{- define "weeb-ssr.labels" -}}
-app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+{{- define "ssr-knative.labels" -}}
+app.kubernetes.io/name: {{ include "ssr-knative.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- end -}}
 
-{{- define "weeb-ssr.ssrName" -}}
-{{- printf "%s-ssr" (include "weeb-ssr.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- define "ssr-knative.ssrName" -}}
+{{- printf "%s-ssr" (include "ssr-knative.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "weeb-ssr.edgeName" -}}
-{{- printf "%s-edge" (include "weeb-ssr.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- define "ssr-knative.edgeName" -}}
+{{- printf "%s-edge" (include "ssr-knative.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "weeb-ssr.redisName" -}}
-{{- printf "%s-redis" (include "weeb-ssr.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- define "ssr-knative.redisName" -}}
+{{- printf "%s-redis" (include "ssr-knative.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -34,7 +34,7 @@ The cache namespace. Defaults to the SSR image tag so that shipping a new image
 invalidates the cache — serving the previous build's HTML would reference
 /_app/immutable chunks that no longer exist in the new image.
 */}}
-{{- define "weeb-ssr.cacheVersion" -}}
+{{- define "ssr-knative.cacheVersion" -}}
 {{- if .Values.cacheVersion -}}
 {{- .Values.cacheVersion -}}
 {{- else -}}
@@ -42,11 +42,11 @@ invalidates the cache — serving the previous build's HTML would reference
 {{- end -}}
 {{- end -}}
 
-{{- define "weeb-ssr.redisUrl" -}}
+{{- define "ssr-knative.redisUrl" -}}
 {{- if .Values.redis.external -}}
 {{- .Values.redis.external -}}
 {{- else -}}
-{{- printf "redis://%s.%s.svc.cluster.local:6379" (include "weeb-ssr.redisName" .) .Release.Namespace -}}
+{{- printf "redis://%s.%s.svc.cluster.local:6379" (include "ssr-knative.redisName" .) .Release.Namespace -}}
 {{- end -}}
 {{- end -}}
 
@@ -56,15 +56,15 @@ points this name at knative-local-gateway and routes on the Host header — whic
 is why the edge proxy sets Host to this and moves the public host into
 X-Forwarded-Host.
 */}}
-{{- define "weeb-ssr.ssrUpstream" -}}
-{{- printf "http://%s.%s.svc.cluster.local" (include "weeb-ssr.ssrName" .) .Release.Namespace -}}
+{{- define "ssr-knative.ssrUpstream" -}}
+{{- printf "http://%s.%s.svc.cluster.local" (include "ssr-knative.ssrName" .) .Release.Namespace -}}
 {{- end -}}
 
-{{- define "weeb-ssr.purgeSecretName" -}}
+{{- define "ssr-knative.purgeSecretName" -}}
 {{- if .Values.cache.existingSecret -}}
 {{- .Values.cache.existingSecret -}}
 {{- else -}}
-{{- printf "%s-cache" (include "weeb-ssr.fullname" .) -}}
+{{- printf "%s-cache" (include "ssr-knative.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
@@ -74,15 +74,15 @@ one template is what stops the two tiers drifting — a mismatch in key prefix,
 version, auth cookies or ignored params means the proxy computes keys the SSR
 pods never write, and the hit rate silently goes to zero.
 */}}
-{{- define "weeb-ssr.sharedCacheEnv" -}}
+{{- define "ssr-knative.sharedCacheEnv" -}}
 - name: CACHE_ENABLED
   value: {{ .Values.cache.enabled | quote }}
 - name: CACHE_REDIS_URL
-  value: {{ include "weeb-ssr.redisUrl" . | quote }}
+  value: {{ include "ssr-knative.redisUrl" . | quote }}
 - name: CACHE_KEY_PREFIX
   value: {{ .Values.cache.keyPrefix | quote }}
 - name: CACHE_VERSION
-  value: {{ include "weeb-ssr.cacheVersion" . | quote }}
+  value: {{ include "ssr-knative.cacheVersion" . | quote }}
 - name: CACHE_AUTH_COOKIES
   value: {{ join "," .Values.cache.authCookies | quote }}
 - name: CACHE_IGNORED_PARAMS

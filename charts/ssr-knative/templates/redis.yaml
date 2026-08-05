@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "weeb-ssr.redisName" . }}
+  name: {{ include "ssr-knative.redisName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    {{- include "ssr-knative.labels" . | nindent 4 }}
     app.kubernetes.io/component: redis
 data:
   redis.conf: |
@@ -34,14 +34,14 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "weeb-ssr.redisName" . }}
+  name: {{ include "ssr-knative.redisName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    {{- include "ssr-knative.labels" . | nindent 4 }}
     app.kubernetes.io/component: redis
 spec:
   selector:
-    app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+    app.kubernetes.io/name: {{ include "ssr-knative.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: redis
   ports:
@@ -52,10 +52,10 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "weeb-ssr.redisName" . }}
+  name: {{ include "ssr-knative.redisName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "weeb-ssr.labels" . | nindent 4 }}
+    {{- include "ssr-knative.labels" . | nindent 4 }}
     app.kubernetes.io/component: redis
 spec:
   replicas: 1
@@ -66,7 +66,7 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "weeb-ssr.name" . }}
+      app.kubernetes.io/name: {{ include "ssr-knative.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/component: redis
   template:
@@ -80,7 +80,7 @@ spec:
         # here would recurse.
         checksum/config: {{ printf "%s|%s|%s" .Values.redis.maxmemory .Values.redis.maxmemoryPolicy .Values.redis.image | sha256sum }}
       labels:
-        {{- include "weeb-ssr.labels" . | nindent 8 }}
+        {{- include "ssr-knative.labels" . | nindent 8 }}
         app.kubernetes.io/component: redis
     spec:
       containers:
@@ -117,7 +117,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ include "weeb-ssr.redisName" . }}
+            name: {{ include "ssr-knative.redisName" . }}
         - name: data
           # In-memory only, deliberately. See the config above.
           emptyDir: {}
