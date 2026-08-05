@@ -118,6 +118,12 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            # Must be numeric. The distroless base sets `USER nonroot`, a name,
+            # and the kubelet cannot verify a name is non-root — the container
+            # fails with CreateContainerConfigError: "image has non-numeric user
+            # (nonroot), cannot verify user is non-root". 65532 is the UID
+            # behind that name.
+            runAsUser: {{ .Values.edge.runAsUser | int64 }}
             capabilities:
               drop: ["ALL"]
 {{- if .Values.edge.podDisruptionBudget.enabled }}

@@ -18,7 +18,10 @@ FROM gcr.io/distroless/static-debian12:nonroot
 
 COPY --from=build /out/edge-cache /edge-cache
 
-USER nonroot:nonroot
+# Numeric, not `nonroot:nonroot`. Kubernetes cannot verify a *named* user is
+# non-root, so a pod with runAsNonRoot: true fails to start against an image
+# whose USER is a name. 65532 is the UID distroless calls "nonroot".
+USER 65532:65532
 EXPOSE 8080
 
 ENTRYPOINT ["/edge-cache"]

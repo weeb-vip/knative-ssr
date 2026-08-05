@@ -132,6 +132,11 @@ edge:
   # Must exceed SSR cold start, since a miss waits for a pod to come up.
   upstreamTimeout: 30000
 
+  # Numeric UID the proxy runs as. Must be numeric, not a user name — with
+  # runAsNonRoot: true the kubelet cannot verify a named user and the container
+  # never starts. 65532 is distroless's "nonroot".
+  runAsUser: 65532
+
   # Let the proxy cache origin responses itself (standalone mode). Set false if
   # your app has an adapter and you want writes to come only from it.
   write: true
