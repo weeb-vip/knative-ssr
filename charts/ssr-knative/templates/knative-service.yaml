@@ -63,15 +63,16 @@ spec:
             - name: http1
               containerPort: {{ .Values.ssr.port }}
           env:
-            # HOST/PORT cover most Node SSR servers; HOSTNAME is what a Next.js
-            # standalone build reads. Setting all three is harmless and saves a
-            # per-framework special case.
+            # PORT is deliberately absent: Knative reserves it and injects it
+            # from containerPort above. Setting it here is rejected at admission
+            # with `"PORT" is a reserved environment variable`.
+            #
+            # HOST binds the listener; HOSTNAME is what a Next.js standalone
+            # build reads. Both are safe to set for every framework.
             - name: HOST
               value: "0.0.0.0"
             - name: HOSTNAME
               value: "0.0.0.0"
-            - name: PORT
-              value: {{ .Values.ssr.port | quote }}
             # The public host arrives here in X-Forwarded-Host (the edge proxy
             # sets it), and cache keys are host-scoped.
             - name: HOST_HEADER
